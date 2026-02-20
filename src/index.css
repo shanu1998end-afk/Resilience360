@@ -204,6 +204,16 @@ button:disabled {
   margin-top: var(--space-3);
 }
 
+.section-back-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: var(--space-2);
+}
+
+.section-back-btn {
+  min-width: 220px;
+}
+
 .section-card {
   min-height: 92px;
   text-align: left;
@@ -861,6 +871,15 @@ progress {
 
   .inline-controls {
     flex-direction: column;
+  }
+
+  .section-back-row {
+    width: 100%;
+  }
+
+  .section-back-btn {
+    width: 100%;
+    min-width: 0;
   }
 
   .inline-controls label,
