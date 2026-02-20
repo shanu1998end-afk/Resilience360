@@ -638,6 +638,7 @@ function App() {
   const [infraModels, setInfraModels] = useState<InfraModel[]>([])
   const [isLoadingInfraModels, setIsLoadingInfraModels] = useState(false)
   const [infraModelsError, setInfraModelsError] = useState<string | null>(null)
+  const [showInfraLayoutVideo, setShowInfraLayoutVideo] = useState(false)
   const [designProvince, setDesignProvince] = useState('Punjab')
   const [designCity, setDesignCity] = useState('Lahore')
   const [designSoilType, setDesignSoilType] = useState<'Rocky' | 'Sandy' | 'Clayey' | 'Silty' | 'Saline'>('Clayey')
@@ -654,6 +655,7 @@ function App() {
   const t = translations[language]
   const isUrdu = language === 'ur'
   const isHomeView = !activeSection
+  const infraLayoutVideoSrc = `${import.meta.env.BASE_URL}videos/layout.mp4`
   const districtRiskLookup = useMemo(() => districtRiskLookupByName(), [])
   const availableMapDistricts = useMemo(() => listDistrictsByProvince(selectedProvince), [selectedProvince])
   const selectedDistrictProfile = useMemo<DistrictRiskProfile | null>(
@@ -2638,6 +2640,28 @@ function App() {
         <div className="panel section-panel section-design-toolkit">
           <h2>{t.sections.infraModels}</h2>
           <p>AI catalog of resilient infrastructure models with realistic visuals, features, and Pakistan-specific implementation benefits.</p>
+          <div className="infra-video-panel">
+            <h3>Infra Layout Video</h3>
+            <p>Play the project layout video directly in the app.</p>
+            {!showInfraLayoutVideo ? (
+              <button onClick={() => setShowInfraLayoutVideo(true)}>▶️ Play Layout Video</button>
+            ) : (
+              <>
+                <video
+                  className="infra-layout-video"
+                  controls
+                  controlsList="nodownload noremoteplayback"
+                  disablePictureInPicture
+                  onContextMenu={(event) => event.preventDefault()}
+                  preload="metadata"
+                >
+                  <source src={infraLayoutVideoSrc} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+                <button onClick={() => setShowInfraLayoutVideo(false)}>⏹️ Hide Video</button>
+              </>
+            )}
+          </div>
           <button onClick={loadResilienceInfraModels} disabled={isLoadingInfraModels}>
             {isLoadingInfraModels ? '🤖 Generating AI Infra Models...' : '🧱 Load Resilience Infra Models'}
           </button>

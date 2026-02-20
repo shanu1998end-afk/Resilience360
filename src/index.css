@@ -434,6 +434,27 @@ img {
   padding: var(--space-3) var(--space-4) var(--space-2) 24px;
 }
 
+.infra-video-panel {
+  margin: 10px 0 14px;
+  border: 1px solid #d5e4f2;
+  border-radius: 10px;
+  background: #f8fcff;
+  padding: 10px;
+}
+
+.infra-video-panel h3 {
+  margin: 0 0 6px;
+}
+
+.infra-layout-video {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #cbdfee;
+  background: #00131f;
+  margin: 8px 0;
+  max-height: 62vh;
+}
+
 .section-retrofit ol {
   background: #f8fcff;
   border: 1px solid #dceaf7;
