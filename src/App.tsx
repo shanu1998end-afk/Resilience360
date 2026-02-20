@@ -13,6 +13,14 @@ import {
 } from './services/constructionGuidance'
 import { fetchResilienceInfraModels, type InfraModel } from './services/infraModels'
 import {
+  generateInfraModelResearchImages,
+  generateStructuralDesignReport,
+  researchInfraModel,
+  type InfraResearchImage,
+  type InfraResearchResult,
+  type StructuralDesignReport,
+} from './services/infraResearch'
+import {
   districtRiskLookupByName,
   findDistrictRiskProfile,
   listDistrictsByProvince,
@@ -859,6 +867,20 @@ function App() {
   const [infraModels, setInfraModels] = useState<InfraModel[]>(() => preloadedInfraModels)
   const [isLoadingInfraModels, setIsLoadingInfraModels] = useState(false)
   const [infraModelsError, setInfraModelsError] = useState<string | null>(null)
+  const [infraResearchName, setInfraResearchName] = useState('')
+  const [isResearchingInfra, setIsResearchingInfra] = useState(false)
+  const [infraResearchError, setInfraResearchError] = useState<string | null>(null)
+  const [infraResearchResult, setInfraResearchResult] = useState<InfraResearchResult | null>(null)
+  const [infraResearchImages, setInfraResearchImages] = useState<InfraResearchImage[]>([])
+  const [isGeneratingInfraViews, setIsGeneratingInfraViews] = useState(false)
+  const [showStructuralDesignForm, setShowStructuralDesignForm] = useState(false)
+  const [designReportLocation, setDesignReportLocation] = useState('')
+  const [designReportGeoTech, setDesignReportGeoTech] = useState('')
+  const [designReportStories, setDesignReportStories] = useState(1)
+  const [designReportUseType, setDesignReportUseType] = useState('house')
+  const [isGeneratingStructuralDesign, setIsGeneratingStructuralDesign] = useState(false)
+  const [structuralDesignError, setStructuralDesignError] = useState<string | null>(null)
+  const [structuralDesignReport, setStructuralDesignReport] = useState<StructuralDesignReport | null>(null)
   const [showInfraLayoutVideo, setShowInfraLayoutVideo] = useState(false)
   const [sectionHistory, setSectionHistory] = useState<Array<SectionKey | null>>([])
   const [designProvince, setDesignProvince] = useState('Punjab')
@@ -1467,6 +1489,78 @@ function App() {
       setInfraModelsError(error instanceof Error ? error.message : 'Infra model loading failed.')
     } finally {
       setIsLoadingInfraModels(false)
+    }
+  }
+
+  const runInfraModelResearch = async () => {
+    const modelName = infraResearchName.trim()
+    if (!modelName) {
+      setInfraResearchError('Please enter an infrastructure model name to research.')
+      return
+    }
+
+    setInfraResearchError(null)
+    setStructuralDesignError(null)
+    setInfraResearchResult(null)
+    setInfraResearchImages([])
+    setStructuralDesignReport(null)
+    setShowStructuralDesignForm(false)
+    setIsResearchingInfra(true)
+
+    try {
+      const research = await researchInfraModel({
+        modelName,
+        province: selectedProvince,
+      })
+      setInfraResearchResult(research)
+      setDesignReportLocation(locationText)
+      setIsGeneratingInfraViews(true)
+
+      try {
+        const views = await generateInfraModelResearchImages({
+          modelName,
+          province: selectedProvince,
+        })
+        setInfraResearchImages(views.images)
+      } finally {
+        setIsGeneratingInfraViews(false)
+      }
+    } catch (error) {
+      setInfraResearchError(error instanceof Error ? error.message : 'Infra model research failed.')
+    } finally {
+      setIsResearchingInfra(false)
+    }
+  }
+
+  const runStructuralDesignReport = async () => {
+    if (!infraResearchResult) {
+      setStructuralDesignError('Please research an infra model first.')
+      return
+    }
+
+    const normalizedLocation = designReportLocation.trim()
+    if (!normalizedLocation) {
+      setStructuralDesignError('Please enter location for rates and design context.')
+      return
+    }
+
+    setStructuralDesignError(null)
+    setStructuralDesignReport(null)
+    setIsGeneratingStructuralDesign(true)
+
+    try {
+      const report = await generateStructuralDesignReport({
+        modelName: infraResearchResult.modelName,
+        location: normalizedLocation,
+        geoTechReport: designReportGeoTech.trim(),
+        stories: Math.max(1, Math.round(designReportStories)),
+        intendedUse: designReportUseType,
+      })
+      setStructuralDesignReport(report)
+    } catch (error) {
+      setStructuralDesignError(error instanceof Error ? error.message : 'Structural design report generation failed.')
+    } finally {
+      setIsGeneratingStructuralDesign(false)
     }
   }
 
@@ -3023,6 +3117,257 @@ function App() {
           </button>
 
           {infraModelsError && <p>{infraModelsError}</p>}
+
+          <div className="retrofit-model-output">
+            <h3>🔎 Research a Specific Infra Model</h3>
+            <p>Enter an infrastructure model name to get research-focused use cases, source links, AI views, material profile, and resilience analysis.</p>
+            <div className="inline-controls">
+              <label>
+                Infra Model Name
+                <input
+                  value={infraResearchName}
+                  onChange={(event) => setInfraResearchName(event.target.value)}
+                  placeholder="e.g., Base-isolated residential block"
+                />
+              </label>
+              <button onClick={runInfraModelResearch} disabled={isResearchingInfra}>
+                {isResearchingInfra ? '🤖 Researching Model...' : '🔍 Search + Analyze Model'}
+              </button>
+            </div>
+
+            {infraResearchError && <p>{infraResearchError}</p>}
+
+            {infraResearchResult && (
+              <div className="retrofit-ai-guidance">
+                <p>
+                  <strong>Model:</strong> {infraResearchResult.modelName}
+                </p>
+                <p>{infraResearchResult.overview}</p>
+
+                <div className="inline-controls">
+                  <a href={infraResearchResult.googleSearch.global} target="_blank" rel="noopener noreferrer">
+                    🌍 Google Search (Global)
+                  </a>
+                  <a href={infraResearchResult.googleSearch.pakistan} target="_blank" rel="noopener noreferrer">
+                    🇵🇰 Google Search (Pakistan)
+                  </a>
+                </div>
+
+                {infraResearchResult.sourceLinks.length > 0 && (
+                  <>
+                    <h4>Authentic Source References</h4>
+                    <ul>
+                      {infraResearchResult.sourceLinks.map((source) => (
+                        <li key={source}>
+                          <a href={source} target="_blank" rel="noopener noreferrer">
+                            {source}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+
+                <h4>Where Used Globally</h4>
+                <ul>
+                  {infraResearchResult.globalUseCases.map((useCase, index) => (
+                    <li key={`${useCase.country}-${useCase.project}-${index}`}>
+                      <strong>{useCase.country}</strong> — {useCase.project}: {useCase.application} ({useCase.evidenceNote})
+                    </li>
+                  ))}
+                </ul>
+
+                <h4>Potential Use in Pakistan</h4>
+                <ul>
+                  {infraResearchResult.pakistanUseCases.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+
+                <h4>Model Features</h4>
+                <ul>
+                  {infraResearchResult.features.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+
+                <h4>Materials and Availability</h4>
+                <ul>
+                  {infraResearchResult.materials.map((item) => (
+                    <li key={`${item.name}-${item.specification}`}>
+                      <strong>{item.name}</strong>: {item.specification} | Availability in Pakistan: {item.availabilityInPakistan}
+                    </li>
+                  ))}
+                </ul>
+
+                <p>
+                  <strong>Availability (Pakistan):</strong> {infraResearchResult.availability.readinessPakistan}
+                </p>
+                <p>
+                  <strong>Local Supply Potential:</strong> {infraResearchResult.availability.localSupplyPotential}
+                </p>
+                <p>
+                  <strong>Import Dependency:</strong> {infraResearchResult.availability.importDependencyNote}
+                </p>
+
+                <p>
+                  <strong>Flood Resilience ({infraResearchResult.resilience.floodScore}/10):</strong> {infraResearchResult.resilience.flood}
+                </p>
+                <p>
+                  <strong>Earthquake Resilience ({infraResearchResult.resilience.earthquakeScore}/10):</strong>{' '}
+                  {infraResearchResult.resilience.earthquake}
+                </p>
+
+                {isGeneratingInfraViews && <p>Generating AI model views (front, back, side, top, isometric)...</p>}
+
+                {infraResearchImages.length > 0 && (
+                  <>
+                    <h4>AI Model Views</h4>
+                    <div className="retrofit-defect-list">
+                      {infraResearchImages.map((image) => (
+                        <article key={image.view} className="retrofit-defect-card">
+                          <h4>{image.view}</h4>
+                          <img src={image.imageDataUrl} alt={`${infraResearchResult.modelName} ${image.view}`} className="retrofit-preview" />
+                        </article>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <button onClick={() => setShowStructuralDesignForm((value) => !value)}>
+                  📐 Structural Design Report
+                </button>
+
+                {showStructuralDesignForm && (
+                  <div className="retrofit-model-output">
+                    <h4>Structural Design Inputs</h4>
+                    <div className="inline-controls">
+                      <label>
+                        Location (for rates)
+                        <input
+                          value={designReportLocation}
+                          onChange={(event) => setDesignReportLocation(event.target.value)}
+                          placeholder="e.g., Lahore, Punjab"
+                        />
+                      </label>
+                      <label>
+                        Geo Tech Report (optional)
+                        <input
+                          value={designReportGeoTech}
+                          onChange={(event) => setDesignReportGeoTech(event.target.value)}
+                          placeholder="e.g., SBC 150 kPa, water table 2.4m"
+                        />
+                      </label>
+                      <label>
+                        Number of Stories
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={designReportStories}
+                          onChange={(event) => setDesignReportStories(Number(event.target.value) || 1)}
+                        />
+                      </label>
+                      <label>
+                        Build As
+                        <select value={designReportUseType} onChange={(event) => setDesignReportUseType(event.target.value)}>
+                          <option value="house">House</option>
+                          <option value="school">School</option>
+                          <option value="clinic">Clinic</option>
+                          <option value="shelter">Shelter</option>
+                          <option value="mixed-use">Mixed-use Structure</option>
+                        </select>
+                      </label>
+                    </div>
+                    <button onClick={runStructuralDesignReport} disabled={isGeneratingStructuralDesign}>
+                      {isGeneratingStructuralDesign ? '🤖 Generating Structural Design Report...' : '🧮 Generate Structural Design Report'}
+                    </button>
+                    {structuralDesignError && <p>{structuralDesignError}</p>}
+                  </div>
+                )}
+
+                {structuralDesignReport && (
+                  <div className="retrofit-model-output">
+                    <h4>Generated Structural Design Report</h4>
+                    <p>{structuralDesignReport.summary}</p>
+
+                    <h4>Design Assumptions</h4>
+                    <ul>
+                      {structuralDesignReport.designAssumptions.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+
+                    <p>
+                      <strong>Structural System:</strong> {structuralDesignReport.structuralSystem}
+                    </p>
+                    <p>
+                      <strong>Foundation System:</strong> {structuralDesignReport.foundationSystem}
+                    </p>
+                    <p>
+                      <strong>Load Path & Lateral System:</strong> {structuralDesignReport.loadPathAndLateralSystem}
+                    </p>
+
+                    <h4>Material Specifications</h4>
+                    <ul>
+                      {structuralDesignReport.materialSpecifications.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+
+                    <h4>Preliminary Member Sizing</h4>
+                    <ul>
+                      {structuralDesignReport.preliminaryMemberSizing.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+
+                    <h4>Flood Resilience Measures</h4>
+                    <ul>
+                      {structuralDesignReport.floodResilienceMeasures.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+
+                    <h4>Earthquake Resilience Measures</h4>
+                    <ul>
+                      {structuralDesignReport.earthquakeResilienceMeasures.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+
+                    <h4>Construction Materials (BOQ-Oriented)</h4>
+                    <ul>
+                      {structuralDesignReport.constructionMaterialsBOQ.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+
+                    <h4>Rate and Cost Notes</h4>
+                    <ul>
+                      {structuralDesignReport.rateAndCostNotes.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+
+                    <h4>Code and Compliance Checks</h4>
+                    <ul>
+                      {structuralDesignReport.codeAndComplianceChecks.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+
+                    <h4>Limitations</h4>
+                    <ul>
+                      {structuralDesignReport.limitations.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {infraModels.length > 0 && (
             <div className="retrofit-defect-list">

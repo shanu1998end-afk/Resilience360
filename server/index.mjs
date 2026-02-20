@@ -345,6 +345,239 @@ app.post('/api/models/resilience-catalog', async (req, res) => {
   }
 })
 
+app.post('/api/models/research', async (req, res) => {
+  if (!openai) {
+    res.status(503).json({
+      error: 'OpenAI key missing. Set OPENAI_API_KEY to enable infra model research.',
+    })
+    return
+  }
+
+  try {
+    const modelName = String(req.body.modelName ?? '').trim()
+    const province = String(req.body.province ?? 'Pakistan')
+
+    if (!modelName) {
+      res.status(400).json({ error: 'modelName is required.' })
+      return
+    }
+
+    const completion = await openai.chat.completions.create({
+      model,
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are a civil engineering research assistant. Return strict JSON only. Use conservative, practical guidance for Pakistan and include source links from credible institutions where possible.',
+        },
+        {
+          role: 'user',
+          content:
+            `Research this infrastructure model: ${modelName}. Focus on where it is used around the world and feasibility for Pakistan (${province}). Return strict JSON using this schema:
+{
+  "modelName": string,
+  "overview": string,
+  "globalUseCases": [{ "country": string, "project": string, "application": string, "evidenceNote": string }],
+  "pakistanUseCases": string[],
+  "features": string[],
+  "materials": [{ "name": string, "specification": string, "availabilityInPakistan": "High|Medium|Low" }],
+  "availability": {
+    "readinessPakistan": string,
+    "localSupplyPotential": string,
+    "importDependencyNote": string
+  },
+  "resilience": {
+    "flood": string,
+    "earthquake": string,
+    "floodScore": number,
+    "earthquakeScore": number
+  },
+  "sourceLinks": string[],
+  "googleSearchHints": {
+    "global": string,
+    "pakistan": string
+  }
+}. Constraints: floodScore and earthquakeScore must be integers 1-10. sourceLinks should be direct URLs and not placeholders.`,
+        },
+      ],
+    })
+
+    const text = completion.choices[0]?.message?.content ?? ''
+    const parsed = extractJson(text)
+
+    const googleGlobal = `https://www.google.com/search?q=${encodeURIComponent(`${modelName} global case studies infrastructure`)}`
+    const googlePakistan = `https://www.google.com/search?q=${encodeURIComponent(`${modelName} Pakistan infrastructure`)}`
+
+    res.json({
+      modelName: String(parsed.modelName ?? modelName),
+      overview: String(parsed.overview ?? ''),
+      globalUseCases: safeArray(parsed.globalUseCases).map((item) => ({
+        country: String(item?.country ?? ''),
+        project: String(item?.project ?? ''),
+        application: String(item?.application ?? ''),
+        evidenceNote: String(item?.evidenceNote ?? ''),
+      })),
+      pakistanUseCases: safeArray(parsed.pakistanUseCases).map((item) => String(item)),
+      features: safeArray(parsed.features).map((item) => String(item)),
+      materials: safeArray(parsed.materials).map((item) => ({
+        name: String(item?.name ?? ''),
+        specification: String(item?.specification ?? ''),
+        availabilityInPakistan: String(item?.availabilityInPakistan ?? 'Medium'),
+      })),
+      availability: {
+        readinessPakistan: String(parsed.availability?.readinessPakistan ?? ''),
+        localSupplyPotential: String(parsed.availability?.localSupplyPotential ?? ''),
+        importDependencyNote: String(parsed.availability?.importDependencyNote ?? ''),
+      },
+      resilience: {
+        flood: String(parsed.resilience?.flood ?? ''),
+        earthquake: String(parsed.resilience?.earthquake ?? ''),
+        floodScore: Math.max(1, Math.min(10, Number(parsed.resilience?.floodScore ?? 6) || 6)),
+        earthquakeScore: Math.max(1, Math.min(10, Number(parsed.resilience?.earthquakeScore ?? 6) || 6)),
+      },
+      sourceLinks: safeArray(parsed.sourceLinks).map((item) => String(item)).filter(Boolean),
+      googleSearch: {
+        global: googleGlobal,
+        pakistan: googlePakistan,
+        globalHint: String(parsed.googleSearchHints?.global ?? `${modelName} global case studies infrastructure`),
+        pakistanHint: String(parsed.googleSearchHints?.pakistan ?? `${modelName} Pakistan infrastructure applications`),
+      },
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Infra model research failed.'
+    res.status(500).json({ error: message })
+  }
+})
+
+app.post('/api/models/research-images', async (req, res) => {
+  if (!openai) {
+    res.status(503).json({
+      error: 'OpenAI key missing. Set OPENAI_API_KEY to enable infra model view image generation.',
+    })
+    return
+  }
+
+  try {
+    const modelName = String(req.body.modelName ?? '').trim()
+    const province = String(req.body.province ?? 'Pakistan')
+
+    if (!modelName) {
+      res.status(400).json({ error: 'modelName is required.' })
+      return
+    }
+
+    const views = ['Front View', 'Back View', 'Left Side View', 'Right Side View', 'Top/Roof View', 'Isometric View']
+    const images = []
+
+    for (const view of views) {
+      const prompt = `Photorealistic civil-infrastructure concept image of ${modelName} for Pakistan (${province}). Required camera angle: ${view}. Show realistic structural details, drainage, seismic safety elements, and material context. No text labels.`
+      const generated = await openai.images.generate({
+        model: 'gpt-image-1',
+        prompt,
+        size: '1024x1024',
+      })
+
+      const b64 = generated.data?.[0]?.b64_json
+      if (!b64) continue
+
+      images.push({
+        view,
+        imageDataUrl: `data:image/png;base64,${b64}`,
+      })
+    }
+
+    res.json({ images })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Infra model view image generation failed.'
+    res.status(500).json({ error: message })
+  }
+})
+
+app.post('/api/models/structural-design-report', async (req, res) => {
+  if (!openai) {
+    res.status(503).json({
+      error: 'OpenAI key missing. Set OPENAI_API_KEY to enable structural design reporting.',
+    })
+    return
+  }
+
+  try {
+    const modelName = String(req.body.modelName ?? '').trim()
+    const location = String(req.body.location ?? '').trim()
+    const stories = Number(req.body.stories ?? 1)
+    const geoTechReport = String(req.body.geoTechReport ?? '').trim()
+    const intendedUse = String(req.body.intendedUse ?? 'house').trim()
+
+    if (!modelName || !location || !stories) {
+      res.status(400).json({ error: 'modelName, location and stories are required.' })
+      return
+    }
+
+    const completion = await openai.chat.completions.create({
+      model,
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are a structural engineer. Provide a preliminary conceptual report only (not stamped final design). Return strict JSON.',
+        },
+        {
+          role: 'user',
+          content:
+            `Generate a preliminary structural design report for real-world planning.
+Model: ${modelName}
+Location: ${location}
+Stories: ${stories}
+Intended Use: ${intendedUse}
+GeoTech Report (optional input): ${geoTechReport || 'Not provided'}
+
+Return strict JSON schema:
+{
+  "summary": string,
+  "designAssumptions": string[],
+  "structuralSystem": string,
+  "foundationSystem": string,
+  "loadPathAndLateralSystem": string,
+  "materialSpecifications": string[],
+  "preliminaryMemberSizing": string[],
+  "floodResilienceMeasures": string[],
+  "earthquakeResilienceMeasures": string[],
+  "constructionMaterialsBOQ": string[],
+  "rateAndCostNotes": string[],
+  "codeAndComplianceChecks": string[],
+  "limitations": string[]
+}. Keep practical for Pakistan and mention that final design needs local licensed engineer review.`,
+        },
+      ],
+    })
+
+    const text = completion.choices[0]?.message?.content ?? ''
+    const parsed = extractJson(text)
+
+    res.json({
+      summary: String(parsed.summary ?? ''),
+      designAssumptions: safeArray(parsed.designAssumptions).map((item) => String(item)),
+      structuralSystem: String(parsed.structuralSystem ?? ''),
+      foundationSystem: String(parsed.foundationSystem ?? ''),
+      loadPathAndLateralSystem: String(parsed.loadPathAndLateralSystem ?? ''),
+      materialSpecifications: safeArray(parsed.materialSpecifications).map((item) => String(item)),
+      preliminaryMemberSizing: safeArray(parsed.preliminaryMemberSizing).map((item) => String(item)),
+      floodResilienceMeasures: safeArray(parsed.floodResilienceMeasures).map((item) => String(item)),
+      earthquakeResilienceMeasures: safeArray(parsed.earthquakeResilienceMeasures).map((item) => String(item)),
+      constructionMaterialsBOQ: safeArray(parsed.constructionMaterialsBOQ).map((item) => String(item)),
+      rateAndCostNotes: safeArray(parsed.rateAndCostNotes).map((item) => String(item)),
+      codeAndComplianceChecks: safeArray(parsed.codeAndComplianceChecks).map((item) => String(item)),
+      limitations: safeArray(parsed.limitations).map((item) => String(item)),
+      generatedAt: new Date().toISOString(),
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Structural design report generation failed.'
+    res.status(500).json({ error: message })
+  }
+})
+
 app.use((error, req, res, next) => {
   if (error instanceof SyntaxError && 'body' in error && req.path.startsWith('/api/')) {
     res.status(400).json({ error: 'Invalid JSON payload.' })
