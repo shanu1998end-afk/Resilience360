@@ -219,6 +219,12 @@ button:disabled {
     background var(--motion-slow) var(--ease-standard);
 }
 
+.section-card.active {
+  border-color: #7fb1d8;
+  background: linear-gradient(180deg, #f2f8ff 0%, #e6f2ff 100%);
+  box-shadow: 0 10px 20px rgba(39, 95, 135, 0.2);
+}
+
 .home-card,
 .section-card {
   justify-content: flex-start;

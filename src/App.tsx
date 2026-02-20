@@ -3064,9 +3064,14 @@ function App() {
           </>
         )}
         {!isHomeView && (
-          <section className="card-grid">
+          <section className="card-grid" aria-label="Quick Module Switcher">
             {sectionKeys.map((key) => (
-              <button key={key} className="section-card" onClick={() => setActiveSection(key)}>
+              <button
+                key={key}
+                className={`section-card ${activeSection === key ? 'active' : ''}`}
+                onClick={() => setActiveSection(key)}
+                aria-current={activeSection === key ? 'page' : undefined}
+              >
                 {t.sections[key]}
               </button>
             ))}
