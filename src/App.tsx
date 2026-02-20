@@ -530,6 +530,94 @@ const getBestPracticeImage = (title: string) =>
   bestPracticeImageModules[`./assets/best-practices/${toBestPracticeSlug(title)}.png`] ??
   ''
 
+const infraModelImageModules = import.meta.glob('./assets/infra-models/*.{jpg,png}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>
+
+const getInfraModelImage = (id: string) =>
+  infraModelImageModules[`./assets/infra-models/${id}.jpg`] ??
+  infraModelImageModules[`./assets/infra-models/${id}.png`] ??
+  ''
+
+const preloadedInfraModelSpecs: Omit<InfraModel, 'imageDataUrl'>[] = [
+  {
+    id: 'flood-housing-cluster-pk',
+    title: 'Elevated Flood-Resilient Housing Cluster',
+    description: 'Neighborhood housing cluster with raised plinths, safe egress lanes, and flood-compatible lower levels.',
+    features: ['Raised plinth blocks and dry refuge deck', 'Flood-compatible ground floor detailing', 'Protected lifeline utility shafts'],
+    advantagesPakistan: ['Suitable for riverine settlements in Sindh/South Punjab', 'Cuts repetitive household flood losses', 'Faster re-occupancy after inundation'],
+  },
+  {
+    id: 'seismic-school-block-pk',
+    title: 'Ductile Seismic School Block Retrofit',
+    description: 'Public school strengthening package with confined elements and safe evacuation circulation.',
+    features: ['Column/beam confinement strengthening', 'Masonry infill anchorage strategy', 'Non-structural seismic hazard restraint'],
+    advantagesPakistan: ['Improves school safety in KP and GB', 'Supports phased district retrofit programs', 'Reduces disruption after seismic events'],
+  },
+  {
+    id: 'bridge-approach-resilience-pk',
+    title: 'Bridge Approach and Embankment Resilience Model',
+    description: 'Approach slab, toe protection, and drainage model for bridge connectivity during floods and quakes.',
+    features: ['Scour-resistant toe protection', 'Controlled drainage and erosion barriers', 'Seismic joint movement safety detailing'],
+    advantagesPakistan: ['Protects evacuation and trade routes', 'Reduces emergency access failures', 'Lower lifecycle maintenance burden'],
+  },
+  {
+    id: 'community-shelter-hub-pk',
+    title: 'Community Multi-Hazard Shelter Hub',
+    description: 'Dual-use community shelter with resilient core, emergency power/water, and warning support systems.',
+    features: ['Hardened shelter core with safe capacity layout', 'Backup power-water-communications room', 'Accessible evacuation ramp/circulation'],
+    advantagesPakistan: ['Supports UC-level emergency planning', 'Useful for daily community services', 'Improves last-mile response readiness'],
+  },
+  {
+    id: 'flood-health-post-pk',
+    title: 'Flood-Safe Primary Health Post Model',
+    description: 'Health post with raised clinical areas and protected medicine/cold-chain services.',
+    features: ['Raised treatment and storage areas', 'Backflow-safe sanitation routing', 'Protected emergency access path'],
+    advantagesPakistan: ['Keeps basic care running during floods', 'Reduces medicine spoilage losses', 'Improves continuity in vulnerable districts'],
+  },
+  {
+    id: 'resilient-waterpoint-pk',
+    title: 'Resilient Community Water Point Model',
+    description: 'Flood- and quake-aware public water point with protected pump controls and anchored system layout.',
+    features: ['Raised/anchored pump and control units', 'Drainage apron and contamination barrier', 'Quick-repair modular component access'],
+    advantagesPakistan: ['Improves safe water availability post-disaster', 'Lower contamination risk after floods', 'Easier local maintenance by municipal teams'],
+  },
+  {
+    id: 'lifeline-utility-corridor-pk',
+    title: 'Seismic-Resilient Lifeline Utility Corridor',
+    description: 'Utility corridor package for water, power, and telecom with seismic restraints and flexible joints.',
+    features: ['Seismic braces for utility runs', 'Flexible joint transition sections', 'Critical valve and panel anchorage'],
+    advantagesPakistan: ['Reduces service interruption during earthquakes', 'Protects critical urban systems', 'Supports rapid post-event restoration'],
+  },
+  {
+    id: 'sponge-street-drainage-pk',
+    title: 'Urban Sponge Street and Drainage Retrofit',
+    description: 'Permeable paving + bioswale + retention pocket model for dense flood-prone neighborhoods.',
+    features: ['Permeable roadside surface sections', 'Bioswale and sediment trap chain', 'Controlled outflow retention chambers'],
+    advantagesPakistan: ['Reduces urban waterlogging duration', 'Improves monsoon drainage performance', 'Adaptable to phased municipal upgrading'],
+  },
+  {
+    id: 'resilient-market-block-pk',
+    title: 'Resilient Market and Commercial Block Model',
+    description: 'Small-business cluster design with flood-safe services and improved seismic load paths.',
+    features: ['Elevated critical service zone', 'Confinement/tie detailing for shop rows', 'Emergency exit and utility isolation plan'],
+    advantagesPakistan: ['Protects livelihoods in district bazaars', 'Reduces downtime after hazard events', 'Supports safer rebuilding standards'],
+  },
+  {
+    id: 'district-eoc-building-pk',
+    title: 'District Emergency Operations Center (EOC) Model',
+    description: 'Multi-hazard command facility model for district response coordination and continuity operations.',
+    features: ['Resilient command floor and communication core', 'Backup control power/water system', 'Integrated dispatch and shelter coordination room'],
+    advantagesPakistan: ['Improves district incident coordination', 'Supports faster field deployment', 'Strengthens institutional resilience capacity'],
+  },
+]
+
+const preloadedInfraModels: InfraModel[] = preloadedInfraModelSpecs.map((item) => ({
+  ...item,
+  imageDataUrl: getInfraModelImage(item.id),
+}))
+
 const provinceCenters: Record<string, { lat: number; lng: number }> = {
   Punjab: { lat: 31.17, lng: 72.71 },
   Sindh: { lat: 26.87, lng: 68.37 },
@@ -768,7 +856,7 @@ function App() {
   const [isGeneratingGuidance, setIsGeneratingGuidance] = useState(false)
   const [isGeneratingStepImages, setIsGeneratingStepImages] = useState(false)
   const [guidanceError, setGuidanceError] = useState<string | null>(null)
-  const [infraModels, setInfraModels] = useState<InfraModel[]>([])
+  const [infraModels, setInfraModels] = useState<InfraModel[]>(() => preloadedInfraModels)
   const [isLoadingInfraModels, setIsLoadingInfraModels] = useState(false)
   const [infraModelsError, setInfraModelsError] = useState<string | null>(null)
   const [showInfraLayoutVideo, setShowInfraLayoutVideo] = useState(false)
@@ -1364,7 +1452,17 @@ function App() {
         country: 'Pakistan',
         province: selectedProvince,
       })
-      setInfraModels(result.models)
+      setInfraModels((existing) => {
+        const deduped = new Map<string, InfraModel>()
+        for (const model of existing) {
+          deduped.set(model.id, model)
+        }
+        for (const model of result.models) {
+          const key = deduped.has(model.id) ? `${model.id}-${model.title}` : model.id
+          deduped.set(key, model)
+        }
+        return Array.from(deduped.values())
+      })
     } catch (error) {
       setInfraModelsError(error instanceof Error ? error.message : 'Infra model loading failed.')
     } finally {
@@ -2888,6 +2986,9 @@ function App() {
         <div className="panel section-panel section-design-toolkit">
           <h2>{t.sections.infraModels}</h2>
           <p>AI catalog of resilient infrastructure models with realistic visuals, features, and Pakistan-specific implementation benefits.</p>
+          <p>
+            <strong>{preloadedInfraModels.length}</strong> Pakistan-focused resilience models are preloaded below. Use load more to generate additional AI models.
+          </p>
           <div className="infra-video-panel">
             <h3>NDMA-IAPD First Resilient Infrastructure Models – Official Overview</h3>
             <p>
@@ -2918,7 +3019,7 @@ function App() {
             )}
           </div>
           <button onClick={loadResilienceInfraModels} disabled={isLoadingInfraModels}>
-            {isLoadingInfraModels ? '🤖 Generating AI Infra Models...' : '🧱 Load Resilience Infra Models'}
+            {isLoadingInfraModels ? '🤖 Generating Additional Infra Models...' : '➕ Load More Infra Models'}
           </button>
 
           {infraModelsError && <p>{infraModelsError}</p>}
