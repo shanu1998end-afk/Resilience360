@@ -3447,7 +3447,7 @@ function App() {
     if (activeSection === 'applyRegion') {
       return (
         <div className="panel section-panel section-apply-region">
-          <h2>{t.sections.applyRegion}</h2>
+          <h2>{t.sections.applyRegion} — {applyBestPracticeTitle}</h2>
           <p>
             <strong>Best Practice (Apply in My Region):</strong> {applyBestPracticeTitle}
           </p>
@@ -3518,7 +3518,7 @@ function App() {
 
           {constructionGuidance && (
             <div className="retrofit-model-output">
-              <h3>Location-Tailored Construction Guidance</h3>
+              <h3>Location-Tailored Construction Guidance — {applyBestPracticeTitle}</h3>
               <p>
                 <strong>Area:</strong> {applyCity}, {applyProvince} | <strong>Hazard:</strong> {applyHazard} | <strong>Best Practice:</strong> {applyBestPracticeTitle}
               </p>
